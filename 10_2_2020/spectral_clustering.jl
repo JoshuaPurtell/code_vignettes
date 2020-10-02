@@ -1,7 +1,7 @@
 import Pkg;
 #Pkg.add("Clustering")
 #Pkg.add("Plots")
-Pkg.add("GaussianMixtures")
+#Pkg.add("GaussianMixtures")
 
 using LinearAlgebra
 using Clustering
@@ -54,23 +54,48 @@ function assign_k_clusters(k,sigma,points) #points are given as matrix P, each p
         Y[:,j] = Y[:,j]+ X[:,j] ./ sqrt(sum(X[:,j] .^ 2))
     end
 
-    scatter(Y[:,1], Y[:,2],
-        color=:lightrainbow, legend=false)
-
-    savefig("~/desktop/code_vignettes/10_2_2020/clustering_trials/Y_dist.png")
+    
     #6. Perform k-means on rows (transpose as kmeans uses columns as points)
-    YR=kmeans(transpose(X),k)
+    YR=kmeans(transpose(Y),k;init=:rand)
+    c=counts(YR)
+    println(prod(c)/250^2)
+    println(c)
+    while(prod(c)/250^2<3/4)
+        YR=kmeans(transpose(Y),k;init=:rand)
+        c=counts(YR)
+        println(prod(c)/250^2)
+        println(c)
+    end
+    print()
+
+    #try MCL
+    #YR=mcl(dist)
+
+    #YAssgn=assignments(YR)
+    #print(maximum(YAssgn))
+
+    #try kmedoids
+    dist=zeros(length(points),length(points))
+    for i in 1:length(points)
+        for j in 1:length(points)
+            dist[i,j]=-LinearAlgebra.norm(Y[i,:]-Y[j,:])
+        end
+    end
+    #YR=kmedoids(dist,k;init=:kmcen,maxiter=200,display=:iter)
     YAssgn=assignments(YR)
+    
 
     scatter(X[:,1], X[:,2],marker_z=YAssgn,
         color=:lightrainbow, legend=false)
 
     savefig("~/desktop/code_vignettes/10_2_2020/clustering_trials/X_dist.png")
 
-    #7. Return assignments for points
-    #println(YAssgn)
+    scatter(Y[:,1], Y[:,2],marker_z=YAssgn,        
+        color=:lightrainbow, legend=false)
 
-    #8. 
+    savefig("~/desktop/code_vignettes/10_2_2020/clustering_trials/Y_dist.png")
+
+    #7. Return assignments for points
     return YAssgn
 
 end
@@ -93,7 +118,7 @@ function reparam(x;dim=2)
 end
 ##TODO: build test
 k=2
-sigma=500
+sigma=5000
 points=[(i%2)*reparam(rand(1,1)) + 3*((i+1)%2)*(reparam(rand(1,1))) for i in 1:500]
 P=zeros(2,500)
 for p in 1:500
